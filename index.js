@@ -2,7 +2,6 @@
 require('dotenv').config();
 const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 
 const app = express();
 
@@ -13,12 +12,30 @@ app.get('/', (req, res) => {
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process', // <- this one doesn't works in Windows
+      '--disable-gpu',
+      '--disable-canvas-aa',
+      '--disable-2d-canvas-clip-aa',
+      '--disable-gl-drawing-for-tests',
+    ],
   },
 });
 
-client.on('qr', (qr) => {
-  qrcode.generate(qr, { small: true });
+client.on('qr', async (qr) => {
+  try {
+    const pairingCode = await client.requestPairingCode('573173687431');
+    console.log(`=== TU CÓDIGO DE VINCULACIÓN ES: ${pairingCode} ===`);
+  } catch (error) {
+    console.error('Error solicitando el código de emparejamiento:', error);
+  }
 });
 
 client.on('ready', () => {
@@ -27,7 +44,7 @@ client.on('ready', () => {
 
 client.on('message', (message) => {
   if (message.body) {
-    message.reply('¡Hola! Soy el asistente virtual de Natuamigos en desarrollo.');
+    message.reply('Hola, soy yo');
   }
 });
 
